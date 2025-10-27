@@ -22,8 +22,12 @@
 │    │  ├─ VCC → 5V    │          │  ├─ VCC → 5V    │          │
 │    │  ├─ GND → GND   │          │  ├─ GND → GND   │          │
 │    │  ├─ SDA → A4 ───┼──────────┼──┤ SDA ← A4     │          │
-│    │  └─ SCL → A5 ───┼──────────┼──┤ SCL ← A5     │          │
+│    │  └─ SCK → A5 ───┼──────────┼──┤ SCL ← A5     │          │
+│    │     (SCK=SCL) ──┼──────────┼──┤ SAME SIGNAL! │          │
 │    └─────────────────┘          └─────────────────┘          │
+│                                                                 │
+│  NOTE: SCK (OLED) = SCL (MPU6050) = I2C Clock                │
+│        They are the SAME signal - both connect to A5!         │
 │                                                                 │
 │  Serial Ports:                                                  │
 │    ┌─────────────────┐          ┌─────────────────┐          │
@@ -122,7 +126,7 @@
 │ 0  : (RX)      │             │  A4 (SDA) ───┤───── OLED SDA
 │ 1  : (TX)      │             │              │      MPU6050 SDA
 │ 2  :           │             │              │
-│ 3  :           │             │  A5 (SCL) ───┤───── OLED SCL
+│ 3  :           │             │  A5 (SCL) ───┤───── OLED SCK (same as SCL!)
 │ 4  :           │             │              │      MPU6050 SCL
 │ 5  :           │             │              │
 │ 6  : GSM RX ←──┼─── GSM      │              │
@@ -216,6 +220,25 @@
 
 ---
 
+## IMPORTANT: SCK and SCL are the SAME!
+
+**Your OLED has:** SCK (some OLEDs label it this way)
+**MPU6050 has:** SCL
+**They both connect to:** Arduino A5
+
+**Why?** Both are I2C Clock signals:
+- SCK = Serial Clock (I2C terminology)
+- SCL = Serial Clock Line (I2C terminology)
+- **They are THE SAME signal!**
+
+**So your wiring:**
+```
+OLED SCK → A5 ← MPU6050 SCL
+```
+**Both connect to the same pin - NO CONFLICT!** ✅
+
+---
+
 ## Complete Connection Map
 
 ```
@@ -224,12 +247,12 @@ Component        Wire Color    Arduino    Function
 OLED Display     Red          5V         Power
                  Black        GND        Ground
                  Yellow       A4         SDA (data)
-                 Green        A5         SCL (clock)
+                 Green        A5         SCK (clock, same as SCL!)
 
 MPU6050          Red          5V         Power
                  Black        GND        Ground
-                 Yellow       A4         SDA (shared)
-                 Green        A5         SCL (shared)
+                 Yellow       A4         SDA (shared with OLED)
+                 Green        A5         SCL (shared with OLED SCK)
 
 GPS Module       Red          5V         Power
                  Black        GND        Ground
@@ -389,4 +412,47 @@ GND            All GND        Black
 ---
 
 **This visual guide shows all connections clearly!** 🎨✅
+
+---
+
+## Wire Both Devices to Same Pins - Explanation
+
+```
+                    A4 (SDA)
+                      │
+            ┌─────────┴─────────┐
+            │                   │
+        OLED SDA          MPU6050 SDA
+        (data)                (data)
+            │                   │
+            └─────────┬─────────┘
+                      │
+                 Arduino A4
+                      │
+            Both share same pin!
+            (No conflict - I2C multi-device)
+
+                    A5 (SCL)
+                      │
+            ┌─────────┴─────────┐
+            │                   │
+        OLED SCK          MPU6050 SCL
+        (clock)              (clock)
+            │                   │
+            └─────────┬─────────┘
+                      │
+                 Arduino A5
+                      │
+            Both share same pin!
+            SCK = SCL (SAME SIGNAL!)
+```
+
+**Why this works:**
+- I2C protocol supports multiple devices on same bus
+- Each device has unique address
+- OLED: 0x3C
+- MPU6050: 0x68
+- Arduino communicates with each separately
+- **SCK and SCL are identical signals**
+- **Both can connect to A5 - NO PROBLEM!** ✅
 
